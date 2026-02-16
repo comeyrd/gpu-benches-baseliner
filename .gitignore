@@ -1,9 +1,5 @@
 __pycache__
 
-# Compiled CUDA/HIP binaries
-cuda-*
-cu-*
-hip-*
-*.o
-*.so
-*.a
+build
+.clangd
+.vscode

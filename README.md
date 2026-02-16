@@ -1,33 +1,42 @@
+# GPU benchmarks baseliner
+
+/!\ This for of Gpu-benches aims at porting this benchmark to the gpu-kernel-baseliner architecture, and provide the benchmarks for multiple architectures, with all the capabilities of gpu-kernel-baseliner.
+The rest of this README is the orginal one.
+
+/!\ This is a Work In Progress. For now only theses benchmark are supported :
+
+## Supported benchmarks
+
+## gpu-memcpy
+
+Measures the host-to-device transfer rate of the Memcpy function over a range of transfer sizes.
+
 # GPU benchmarks
+
 This is a collection of GPU micro benchmarks. Each test is designed to test a particular scenario or hardware mechanism. Some of the benchmarks have been used to produce data for these papers:
 
 ["Analytical performance estimation during code generation on modern GPUs" ](https://doi.org/10.1016/j.jpdc.2022.11.003)
 
 ["Performance engineering for real and complex tall & skinny matrix multiplication kernels on GPUs"](http://dx.doi.org/10.1177/1094342020965661)
 
+Benchmarks that are called `gpu-<benchmarkname>` are hipifyable! Whereas the default Makefile target builds the CUDA executable `cuda-<benchmarkname>`, the target `make hip-<benchmarkname>` uses the hipify-perl tool to create a file `main.hip` from the `main.cu` file, and builds it using the hip compiler. The CUDA main files are written so that the hipify tool works without further intervention.
 
-
-Benchmarks that are called ```gpu-<benchmarkname>``` are hipifyable! Whereas the default Makefile target builds the CUDA executable ```cuda-<benchmarkname>```, the target ```make hip-<benchmarkname>``` uses the hipify-perl tool to create a file ```main.hip``` from the ```main.cu``` file, and builds it using the hip compiler. The CUDA main files are written so that the hipify tool works without further intervention. 
-
-Also have a look at the [gpu-metrics](gpu-metrics) functions, which provide a concise way of measuring hardware performance counter metrics of a kernel launch inside the running program. 
+Also have a look at the [gpu-metrics](gpu-metrics) functions, which provide a concise way of measuring hardware performance counter metrics of a kernel launch inside the running program.
 
 If any of this is useful, stars and citations are welcome!
-
 
 ## gpu-stream
 
 Measures the bandwidth of streaming kernels for varying occupancy. A shared memory allocation serves as a spoiler, so that only two thread blocks can run per SM. Scanning the thread block size from 32 to 1024 scans the occupancy from 3% to 100%.
 
-
-Kernel | Formula |   |
--------|----------|---|
-init  | A[i] = c  |   1 store stream
-read | sum = A[i] |   1 load stream
-scale | A[i] = B[i] * c |   1 load stream, 1 store stream
-triad | A[i] = B[i] + D[i] * C[i] |  3 load streams, 1 store stream
-3pt | A[i] = B[i-1] + B[i] + B[i+1] |  1 load streams, 1 store stream
-5pt | A[i] = B[i-2] + B[i-1] + B[i] + B[i+1] + B[i+2] |  1 load streams, 1 store stream
-
+| Kernel | Formula                                         |                                |
+| ------ | ----------------------------------------------- | ------------------------------ |
+| init   | A[i] = c                                        | 1 store stream                 |
+| read   | sum = A[i]                                      | 1 load stream                  |
+| scale  | A[i] = B[i] \* c                                | 1 load stream, 1 store stream  |
+| triad  | A[i] = B[i] + D[i] \* C[i]                      | 3 load streams, 1 store stream |
+| 3pt    | A[i] = B[i-1] + B[i] + B[i+1]                   | 1 load streams, 1 store stream |
+| 5pt    | A[i] = B[i-2] + B[i-1] + B[i] + B[i+1] + B[i+2] | 1 load streams, 1 store stream |
 
 The results for the SCALE kernel and a selection of GPUs:
 
@@ -41,7 +50,7 @@ This is a pointer chasing benchmark for memory access latency measurement. A sin
 
 ![latency plot](gpu-latency/latencies_AMD.svg)
 
-The full L1 cache capacity of the AMD GPUs is clearly recognizable at the specified 16kB (MI100, MI210) or 32kB (RX6900XT, MI300X) L1 cache. The latencies of AMD's L1 caches are high, at more than 100 cycles. The RDNA2 based RX6900XT has better latencies than the GCN/CDNA peers, despite a higher clock speed. The RX6900XT' L1.5 cache level up to 128KB is as fast as the other GPUs L1 cache. 
+The full L1 cache capacity of the AMD GPUs is clearly recognizable at the specified 16kB (MI100, MI210) or 32kB (RX6900XT, MI300X) L1 cache. The latencies of AMD's L1 caches are high, at more than 100 cycles. The RDNA2 based RX6900XT has better latencies than the GCN/CDNA peers, despite a higher clock speed. The RX6900XT' L1.5 cache level up to 128KB is as fast as the other GPUs L1 cache.
 All the GPUs have a similar L2 cache latency between 200 and 300 cycles. RX6900XT and MI300X drop out of the L2 cache at exactly 4MB. For the MI300X, this is the capacity of a single XCD's L2 cache segment, of which it has eight. The lone thread running the pointer chasing benchmark only hits in its local L2 cache segment, and not in the other seven ones.
 
 The MI100 and MI210 drawn out transition from L2 cache to DRAM is likely because of a different replacement strategy than RX6900XT and MI300X.
@@ -61,7 +70,7 @@ Measures bandwidths of the first and second cache level. Launches one thread blo
 
 ![cache plot](gpu-cache/cuda-cache.svg)
 
-The 16kB (MI100/MI210), 128kB (V100), 192kB (A100) and 256 kB (H100) L1 cache capacities are very pronounced and sharp. The three NVIDIA architectures both transfer close to 128B/cycle/SM, the maximum measured value on AMD's MI100 and MI210 depends on the data type. For double precision, the maximum is 32B/cycle/CU. For single precision and 16B data types (either float4 or double2) the bandwidth is up to 64B. 
+The 16kB (MI100/MI210), 128kB (V100), 192kB (A100) and 256 kB (H100) L1 cache capacities are very pronounced and sharp. The three NVIDIA architectures both transfer close to 128B/cycle/SM, the maximum measured value on AMD's MI100 and MI210 depends on the data type. For double precision, the maximum is 32B/cycle/CU. For single precision and 16B data types (either float4 or double2) the bandwidth is up to 64B.
 
 This benchmark does not target the memory hierarchy levels past the second cache level (i.e. DRAM for most GPUs), because the data sets do not clearly drop out of a shared cache. Because all thread blocks read the same data, there is a lot of reuse potential inside shared cache before the data is evicted. The RX6900XT values are bonkers past its 128kB shared L1 cache. A100 and H100 drop slightly at 20/25MB, when the capacity of a single cache section is exceeded. Beyond this point, data cannot be replicated in both L2 cache sections and the maximum bandwidth drops, as data has also to be fetched from the other section.
 
@@ -71,24 +80,21 @@ Measures bandwidths of shared cache levels. This benchmark explicitly does not t
 
 ![cache plot](gpu-l2-cache/cuda-cache.svg)
 
-All three GPUs have a similar L2 cache bandwidths of about 5.x TB/s, though with different capactities. 
+All three GPUs have a similar L2 cache bandwidths of about 5.x TB/s, though with different capactities.
 
 A remarkable observation is the RX6900XT, which has a second shared cache level, the 128MB Infinity Cache. At almost 1.92 TB/s, it is as fast as the A100's DRAM.
-At the very beginning, the RX6900XT semi-shared L1 cache can be seen, where for some block placements the 4 L1 caches have a small effect. 
-The same applies to the H100, which has a larger L1 cache with an increased chance for a thread block to find the data it wants to work on already in the L1 cache loaded in by the previous thread block. This only works for the small data sets, where there are only a few different data blocks and this chance is still significant. This is not attributable to the Distributed Shared Memory Network, that allows to load from other SM's shared memory, because it only works for explicit shared memory loads and not global loads. This would require tag checking every L1 cache in the GPC for any load. 
-
-
-
+At the very beginning, the RX6900XT semi-shared L1 cache can be seen, where for some block placements the 4 L1 caches have a small effect.
+The same applies to the H100, which has a larger L1 cache with an increased chance for a thread block to find the data it wants to work on already in the L1 cache loaded in by the previous thread block. This only works for the small data sets, where there are only a few different data blocks and this chance is still significant. This is not attributable to the Distributed Shared Memory Network, that allows to load from other SM's shared memory, because it only works for explicit shared memory loads and not global loads. This would require tag checking every L1 cache in the GPC for any load.
 
 ## gpu-strides
 
-Read only, L1 cache benchmark that accesses memory with strides 1 to 128. The bandwidth is converted to Bytes per cycle and SM. The strides from 1 to 128 are formatted in a 16x8 tableau, because that highlights the recurring patterns of multiples of 2/4/8/16. 
+Read only, L1 cache benchmark that accesses memory with strides 1 to 128. The bandwidth is converted to Bytes per cycle and SM. The strides from 1 to 128 are formatted in a 16x8 tableau, because that highlights the recurring patterns of multiples of 2/4/8/16.
 
 ![image](https://user-images.githubusercontent.com/3269202/214321378-9969f484-1067-47cd-8e11-1bab56c26534.png)
 
 These multiples are important for NVIDIA's architecture, which clearly have their L1 cache structured in a 16 banks of 8B. For strides that are a multiple of 16, every single thread accesses data from the same cache bank. The rate of address translation is reduced when addresses do not fall into the same 128B cache line anymore.
 
-AMD's MI210 appears to have even more banks, with especially stark slowdowns to less than 4B/cycle for multiples of 32. 
+AMD's MI210 appears to have even more banks, with especially stark slowdowns to less than 4B/cycle for multiples of 32.
 
 Testing the stencil-like, 2D structured grid access with different thread block shapes reveals differences in the L1 cache throughput:
 
@@ -96,13 +102,13 @@ Testing the stencil-like, 2D structured grid access with different thread block 
 
 (see the generated machine code of MI210 and A100 here: https://godbolt.org/z/1PvWqs9Kf)
 
-AMD's MI210 is fine (at its much lower level), as long as contiguous blocks of at least 4 threads are accessed. NVIDIA's only reach their maximum throughput for 16 wide thread blocks. 
+AMD's MI210 is fine (at its much lower level), as long as contiguous blocks of at least 4 threads are accessed. NVIDIA's only reach their maximum throughput for 16 wide thread blocks.
 
-Along with the L1 cache size increass, both Ampere and Hopper also slightly improve the rate of L1 cache address lookups. 
+Along with the L1 cache size increass, both Ampere and Hopper also slightly improve the rate of L1 cache address lookups.
 
 ## gpu-small-kernels
 
-This benchmark explors the potential for cache blocking, where kernels work on a small data set that fits into caches. Because the data set is small, and the L2 cache is fast, the kernel executues so quickly that the startup overhead of a kernel launch becomes dominant. The benchmark queues 10000 calls of a streaming SCALE kernel of varying size. Use commandline option "-graph" to use the cudaGraph/hipGraph API. 
+This benchmark explors the potential for cache blocking, where kernels work on a small data set that fits into caches. Because the data set is small, and the L2 cache is fast, the kernel executues so quickly that the startup overhead of a kernel launch becomes dominant. The benchmark queues 10000 calls of a streaming SCALE kernel of varying size. Use commandline option "-graph" to use the cudaGraph/hipGraph API.
 
 ![latency plot](gpu-small-kernels/repeated-stream.svg)
 
@@ -110,11 +116,11 @@ Each device gets a fit of \$a,b\$ for the function
 
 $$T = \frac{V}{a + V/b}$$
 
-which models the performance with a startup overhead \$a\$ and a bandwidth \$b\$ depending on the data volume \$V\$. 
+which models the performance with a startup overhead \$a\$ and a bandwidth \$b\$ depending on the data volume \$V\$.
 
 ## cuda-roofline
 
-This program scans a range of Computational Intensities, by varying the amount of inner loop trips.  It is suitable both to study the transition from memory- to compute bound codes as well as power consumption, clock frequencies and temperatures when using multiple GPUs. The shell script series.sh builds an executable for each value, and executes them one afer another after finishing building.
+This program scans a range of Computational Intensities, by varying the amount of inner loop trips. It is suitable both to study the transition from memory- to compute bound codes as well as power consumption, clock frequencies and temperatures when using multiple GPUs. The shell script series.sh builds an executable for each value, and executes them one afer another after finishing building.
 
 The Code runs simultaneously on all available devices. Example output on four Tesla V100 PCIe 16GB:
 
@@ -135,13 +141,13 @@ The Code runs simultaneously on all available devices. Example output on four Te
 2 640 blocks    64 its      8.125 Fl/B        813 GB/s      6603 GF/s   1380 Mhz   243 W   69°C
 ```
 
-
 ## cuda-memcpy
 
 Measures the host-to-device transfer rate of the cudaMemcpy function over a range of transfer sizes
 
 Example output for a Tesla V100 PCIe 16GB
-``` console
+
+```console
          1kB     0.03ms    0.03GB/s   0.68%
          2kB     0.03ms    0.06GB/s   5.69%
          4kB     0.03ms    0.12GB/s   8.97%
@@ -185,17 +191,13 @@ Measures CUDA Unified Memory transfer rate using a STREAM triad kernel. A range 
     49152 MB 10284.7ms     0.8%     5.0GB/s
 ```
 
-
-
-
-
 ## cuda-incore
 
 Measures the latency and throughput of FMA, DIV and SQRT operation. It scans combinations of ILP=1..8, by generating 1..8 independent dependency chains, and TLP, by varying the warp count on a SM from 1 to 32. The final output is a ILP/TLP table, with the reciprocal throughputs (cycles per operation):
 
 Example output on a Tesla V100 PCIe 16GB:
 
-``` console
+```console
 DFMA
   8.67   4.63   4.57   4.66   4.63   4.72   4.79   4.97
   4.29   2.32   2.29   2.33   2.32   2.36   2.39   2.48
@@ -224,20 +226,19 @@ DSQRT
 Some Features can be extracted from the plot.
 
 Latencies:
- - DFMA: 8 cycles
- - DDIV: 112 cycles
- - DSQRT: 101 cycles
- 
+
+- DFMA: 8 cycles
+- DDIV: 112 cycles
+- DSQRT: 101 cycles
+
 Throughput of one warp (runs on one SM quadrant), no dependencies:
- - DFMA: 1/4 per cycle (ILP 2, to ops overlap)
- - DDIV: 1/112 per cycle (no ILP/overlap)
- - DSQRT: 1/101 per cycle (no ILP/overlap)
-  
+
+- DFMA: 1/4 per cycle (ILP 2, to ops overlap)
+- DDIV: 1/112 per cycle (no ILP/overlap)
+- DSQRT: 1/101 per cycle (no ILP/overlap)
+
 Throughput of multiple warps (all SM quadrants), dependencies irrelevant:
- - DFMA: 1 per cycle 
- - DDIV: 1/7.5 cycles
- - DSQRT: 1/9.6 cycles
- 
 
-
-
+- DFMA: 1 per cycle
+- DDIV: 1/7.5 cycles
+- DSQRT: 1/9.6 cycles
