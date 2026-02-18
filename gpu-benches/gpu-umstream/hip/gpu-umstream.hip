@@ -22,9 +22,10 @@ __global__ void triad(double *A, double *B, double *C, size_t N) {
 }
 template <>
 void GpuUmstream<Device::HipBackend>::setup(std::shared_ptr<Device::HipBackend::stream_t> stream) {
-  CHECK_HIP(hipMallocManaged(&A, buffer_size_kb * KBTOB * sizeof(double)));
-  CHECK_HIP(hipMallocManaged(&B, buffer_size_kb * KBTOB * sizeof(double)));
-  CHECK_HIP(hipMallocManaged(&C, buffer_size_kb * KBTOB * sizeof(double)));
+  size_t nb_bytes = buffer_size_kb * KBTOB * sizeof(double);
+  CHECK_HIP(hipMallocManaged(&A, nb_bytes));
+  CHECK_HIP(hipMallocManaged(&B, nb_bytes));
+  CHECK_HIP(hipMallocManaged(&C, nb_bytes));
 
   hipDeviceProp_t prop;
   int deviceId;
@@ -34,11 +35,15 @@ void GpuUmstream<Device::HipBackend>::setup(std::shared_ptr<Device::HipBackend::
   int maxActiveBlocks = 0;
   CHECK_HIP(hipOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocks, triad, blockSize, 0));
   m_block_count = smCount * maxActiveBlocks;
-  triad<<<m_block_count, blockSize>>>(A, B, C, buffer_size_kb * KBTOB);
+  if(m_prefetch){
+    CHECK_HIP(hipMemPrefetchAsync(A, nb_bytes, deviceId, *stream));
+    CHECK_HIP(hipMemPrefetchAsync(B, nb_bytes, deviceId, *stream));
+    CHECK_HIP(hipMemPrefetchAsync(C, nb_bytes, deviceId, *stream));
+  }
 }
 template <>
 void GpuUmstream<Device::HipBackend>::run_case(std::shared_ptr<HipBackend::stream_t> stream) {
-  triad<<<640, 256, 0, *stream>>>(A, B, C, buffer_size_kb * KBTOB);
+  triad<<<m_block_count, blockSize, 0, *stream>>>(A, B, C, buffer_size_kb * KBTOB);
 }
 template <>
 void GpuUmstream<Device::HipBackend>::setup_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) {
@@ -71,7 +76,7 @@ namespace {
   Baseliner::Axe axe2 = {
       "gpu-umstream",
       "bufferSizeKB",
-      {"1024", "2048", "4096", "8192", "16384", "32768", "65536",}};
+      {"1024", "2048", "4096", "8192", "16384", "32768", "65536", "131072", "262144", "524288", "1048576", "2097152"}};
 
   Baseliner::SingleAxeSuite suite2(std::make_shared<Baseliner::HipBenchmark>(std::move(umstreamBench)),
                                    std::move(axe2));
