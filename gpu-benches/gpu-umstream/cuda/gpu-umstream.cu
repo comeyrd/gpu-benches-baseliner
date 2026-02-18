@@ -66,7 +66,7 @@ void GpuUmstream<Device::CudaBackend>::teardown(std::shared_ptr<typename CudaBac
 namespace {
   static auto umstreamBench = Baseliner::CudaBenchmark()
                                   .set_case<GpuUmstream<Device::CudaBackend>>()
-                                  .set_stopping_criterion<Baseliner::StoppingCriterion>(100, 1)
+                                  .set_stopping_criterion<Baseliner::StoppingCriterion>(10, 1)
                                   .set_block(false)
                                   .set_flush_l2(true)
                                   .add_stat<Baseliner::Stats::Median>()
@@ -75,7 +75,7 @@ namespace {
   Baseliner::Axe axe2 = {
       "gpu-umstream",
       "bufferSizeKB",
-      {"1024", "2048", "4096", "8192", "16384", "32768", "65536", "131072", "262144", "524288", "1048576"}};
+      {"1024", "2048", "4096", "8192", "16384", "32768", "65536", "131072", "262144", "524288", "1048576", "2097152"}};
 
   Baseliner::SingleAxeSuite suite2(std::make_shared<Baseliner::CudaBenchmark>(std::move(umstreamBench)),
                                    std::move(axe2));
