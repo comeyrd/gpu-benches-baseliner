@@ -21,9 +21,10 @@ __global__ void triad(double *A, double *B, double *C, size_t N) {
 }
 template <>
 void GpuUmstream<Device::CudaBackend>::setup(std::shared_ptr<Device::CudaBackend::stream_t> stream) {
-  CHECK_CUDA(cudaMallocManaged(&A, buffer_size_kb * KBTOB * sizeof(double)));
-  CHECK_CUDA(cudaMallocManaged(&B, buffer_size_kb * KBTOB * sizeof(double)));
-  CHECK_CUDA(cudaMallocManaged(&C, buffer_size_kb * KBTOB * sizeof(double)));
+  size_t nb_bytes = buffer_size_kb * KBTOB * sizeof(double);
+  CHECK_CUDA(cudaMallocManaged(&A, nb_bytes));
+  CHECK_CUDA(cudaMallocManaged(&B, nb_bytes));
+  CHECK_CUDA(cudaMallocManaged(&C, nb_bytes));
 
   cudaDeviceProp prop;
   int deviceId;
@@ -33,11 +34,15 @@ void GpuUmstream<Device::CudaBackend>::setup(std::shared_ptr<Device::CudaBackend
   int maxActiveBlocks = 0;
   CHECK_CUDA(cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocks, triad, blockSize, 0));
   m_block_count = smCount * maxActiveBlocks;
-  triad<<<m_block_count, blockSize>>>(A, B, C, buffer_size_kb * KBTOB);
+  if (m_prefetch) {
+    CHECK_CUDA(cudaMemPrefetchAsync(A, nb_bytes, deviceId, *stream));
+    CHECK_CUDA(cudaMemPrefetchAsync(B, nb_bytes, deviceId, *stream));
+    CHECK_CUDA(cudaMemPrefetchAsync(C, nb_bytes, deviceId, *stream));
+  }
 }
 template <>
 void GpuUmstream<Device::CudaBackend>::run_case(std::shared_ptr<CudaBackend::stream_t> stream) {
-  triad<<<640, 256, 0, *stream>>>(A, B, C, buffer_size_kb * KBTOB);
+  triad<<<m_block_count, blockSize, 0, *stream>>>(A, B, C, buffer_size_kb * KBTOB);
 }
 template <>
 void GpuUmstream<Device::CudaBackend>::setup_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) {

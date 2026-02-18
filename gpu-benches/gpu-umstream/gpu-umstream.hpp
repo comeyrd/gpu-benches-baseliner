@@ -26,9 +26,11 @@ public:
   void register_options() override {
     this->add_option("gpu-umstream", "bufferSizeKB", "the size of the buffer in bytes", buffer_size_kb);
     this->add_option("gpu-umstream", "blocksize", "the block size", blockSize);
+    this->add_option("gpu-umstream", "prefetch", "Is the memory pre-fetched ?", m_prefetch);
   }
 
 private:
+  bool m_prefetch = true;
   int m_block_count;
   int blockSize = 256;
   double *A, *B, *C;
