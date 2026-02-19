@@ -7,6 +7,7 @@
       "description": "Common flags for all backends",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
+        "COMBINED_BUILD": "OFF",
         "CMAKE_CXX_STANDARD": "17",
         "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
@@ -38,10 +39,7 @@
     },
     {
       "name": "debug-cuda",
-      "inherits": [
-        "base-common",
-        "flags-debug"
-      ],
+      "inherits": ["base-common", "flags-debug"],
       "displayName": "Debug CUDA (Clang/NVCC)",
       "cacheVariables": {
         "CMAKE_CUDA_HOST_COMPILER": "clang++",
@@ -53,10 +51,7 @@
     },
     {
       "name": "release-cuda",
-      "inherits": [
-        "base-common",
-        "flags-release"
-      ],
+      "inherits": ["base-common", "flags-release"],
       "displayName": "Release CUDA (Clang/NVCC)",
       "cacheVariables": {
         "CMAKE_CUDA_HOST_COMPILER": "clang++",
@@ -68,10 +63,7 @@
     },
     {
       "name": "debug-hip",
-      "inherits": [
-        "base-common",
-        "flags-debug"
-      ],
+      "inherits": ["base-common", "flags-debug"],
       "displayName": "Debug HIP (ROCm)",
       "cacheVariables": {
         "CMAKE_HIP_COMPILER": "clang++",
@@ -81,10 +73,7 @@
     },
     {
       "name": "release-hip",
-      "inherits": [
-        "base-common",
-        "flags-release"
-      ],
+      "inherits": ["base-common", "flags-release"],
       "displayName": "Release HIP (ROCm)",
       "cacheVariables": {
         "CMAKE_HIP_COMPILER": "clang++",

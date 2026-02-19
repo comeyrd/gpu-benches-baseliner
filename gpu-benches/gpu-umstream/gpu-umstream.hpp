@@ -34,4 +34,4 @@ private:
   double *A, *B, *C;
   size_t buffer_size_kb = DEFAULT_BUFFER_SIZE_KB;
 };
-#endif // CUDA_GPU_MEMCPY
+#endif // GPU_UMSTREAM_HPP
