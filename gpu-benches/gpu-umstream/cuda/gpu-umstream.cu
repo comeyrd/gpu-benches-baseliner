@@ -62,6 +62,10 @@ void GpuUmstream<Device::CudaBackend>::teardown(std::shared_ptr<typename CudaBac
   CHECK_CUDA(cudaFree(B));
   CHECK_CUDA(cudaFree(C));
 }
+template <>
+std::string GpuUmstream<Device::CudaBackend>::name() {
+  return "cuda-umstream";
+}
 
 namespace {
   static auto umstreamBench = Baseliner::CudaBenchmark()

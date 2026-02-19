@@ -1,6 +1,6 @@
-#include "hip/hip_runtime.h"
 #include "baseliner/backend/hip/HipBackend.hpp"
 #include "gpu-umstream.hpp"
+#include "hip/hip_runtime.h"
 #include <baseliner/Axe.hpp>
 #include <baseliner/Case.hpp>
 #include <baseliner/Suite.hpp>
@@ -35,7 +35,7 @@ void GpuUmstream<Device::HipBackend>::setup(std::shared_ptr<Device::HipBackend::
   int maxActiveBlocks = 0;
   CHECK_HIP(hipOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocks, triad, blockSize, 0));
   m_block_count = smCount * maxActiveBlocks;
-  if(m_prefetch){
+  if (m_prefetch) {
     CHECK_HIP(hipMemPrefetchAsync(A, nb_bytes, deviceId, *stream));
     CHECK_HIP(hipMemPrefetchAsync(B, nb_bytes, deviceId, *stream));
     CHECK_HIP(hipMemPrefetchAsync(C, nb_bytes, deviceId, *stream));
@@ -62,6 +62,10 @@ void GpuUmstream<Device::HipBackend>::teardown(std::shared_ptr<typename HipBacke
   CHECK_HIP(hipFree(A));
   CHECK_HIP(hipFree(B));
   CHECK_HIP(hipFree(C));
+}
+template <>
+std::string GpuUmstream<Device::HipBackend>::name() {
+  return "hip-umstream";
 }
 
 namespace {

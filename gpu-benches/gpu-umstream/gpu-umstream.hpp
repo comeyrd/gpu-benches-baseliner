@@ -10,9 +10,7 @@ constexpr size_t KBTOB = 1024;
 template <typename Backend>
 class GpuUmstream : public Baseliner::ICase<Backend> {
 public:
-  auto name() -> std::string override {
-    return "cudaMemcpy";
-  };
+  auto name() -> std::string override;
   void setup(std::shared_ptr<typename Backend::stream_t> stream) override;
   void reset_case(std::shared_ptr<typename Backend::stream_t> stream) override {};
   void setup_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) override;
