@@ -1,10 +1,11 @@
-#include "baseliner/backend/hip/HipBackend.hpp"
 #include "gpu-umstream.hpp"
-#include "hip/hip_runtime.h"
 #include <baseliner/Axe.hpp>
 #include <baseliner/Case.hpp>
 #include <baseliner/Suite.hpp>
-
+#include <baseliner/hardware/hip/HipBackend.hpp>
+#include <baseliner/managers/RegisteringMacros.hpp>
+#include <memory>
+using namespace Baseliner::Hardware;
 using namespace Baseliner;
 
 __global__ void scale(double *A, double *B, size_t N) {
@@ -21,8 +22,10 @@ __global__ void triad(double *A, double *B, double *C, size_t N) {
   }
 }
 template <>
-void GpuUmstream<Device::HipBackend>::setup(std::shared_ptr<Device::HipBackend::stream_t> stream) {
-  size_t nb_bytes = buffer_size_kb * KBTOB * sizeof(double);
+void GpuUmstream<HipBackend>::setup(std::shared_ptr<HipBackend::stream_t> stream) {
+  size_t nb_bytes = this->get_work_size() * ONE_MB;
+  m_item_count = this->get_work_size() * (ONE_MB / sizeof(double));
+
   CHECK_HIP(hipMallocManaged(&A, nb_bytes));
   CHECK_HIP(hipMallocManaged(&B, nb_bytes));
   CHECK_HIP(hipMallocManaged(&C, nb_bytes));
@@ -42,48 +45,19 @@ void GpuUmstream<Device::HipBackend>::setup(std::shared_ptr<Device::HipBackend::
   }
 }
 template <>
-void GpuUmstream<Device::HipBackend>::run_case(std::shared_ptr<HipBackend::stream_t> stream) {
-  triad<<<m_block_count, blockSize, 0, *stream>>>(A, B, C, buffer_size_kb * KBTOB);
+void GpuUmstream<HipBackend>::run_case(std::shared_ptr<HipBackend::stream_t> stream) {
+  triad<<<m_block_count, blockSize, 0, *stream>>>(A, B, C, m_item_count);
 }
+
 template <>
-void GpuUmstream<Device::HipBackend>::setup_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) {
-  size_t buffer_size_bytes = buffer_size_kb * KBTOB;
-  size_t total_bytes = buffer_size_bytes * sizeof(double) * 3; // 3 reads
-  engine->register_metric<Baseliner::Stats::ByteNumbers>(total_bytes);
-}
+auto GpuUmstream<HipBackend>::number_of_bytes() -> std::optional<size_t> {
+  return m_item_count * sizeof(double) * 3; // 3reads;
+};
 template <>
-void GpuUmstream<Device::HipBackend>::update_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) {
-  size_t buffer_size_bytes = buffer_size_kb * KBTOB;
-  size_t total_bytes = buffer_size_bytes * sizeof(double) * 3; // 3 reads
-  engine->update_values<Baseliner::Stats::ByteNumbers>(total_bytes);
-}
-template <>
-void GpuUmstream<Device::HipBackend>::teardown(std::shared_ptr<typename HipBackend::stream_t> stream) {
+void GpuUmstream<HipBackend>::teardown(std::shared_ptr<typename HipBackend::stream_t> stream) {
   CHECK_HIP(hipFree(A));
   CHECK_HIP(hipFree(B));
   CHECK_HIP(hipFree(C));
 }
-template <>
-std::string GpuUmstream<Device::HipBackend>::name() {
-  return "hip-umstream";
-}
-
-namespace {
-  static auto umstreamBench = Baseliner::HipBenchmark()
-                                  .set_case<GpuUmstream<Device::HipBackend>>()
-                                  .set_stopping_criterion<Baseliner::StoppingCriterion>(10, 1)
-                                  .set_block(false)
-                                  .set_flush_l2(true)
-                                  .add_stat<Baseliner::Stats::Median>()
-                                  .add_stat<Baseliner::Stats::MedianItemTroughput>();
-
-  Baseliner::Axe axe2 = {
-      "gpu-umstream",
-      "bufferSizeKB",
-      {"1024", "2048", "4096", "8192", "16384", "32768", "65536", "131072", "262144", "524288", "1048576", "2097152"}};
-
-  Baseliner::SingleAxeSuite suite2(std::make_shared<Baseliner::HipBenchmark>(std::move(umstreamBench)),
-                                   std::move(axe2));
-  BASELINER_REGISTER_TASK(&suite2);
-
-} // namespace
+using HipUmstream = GpuUmstream<Hardware::HipBackend>;
+BASELINER_REGISTER_CASE_NAME(HipUmstream, HipUmstream().name());

@@ -2,27 +2,28 @@
 #define GPU_UMSTREAM_HPP
 #include <baseliner/Case.hpp>
 #include <cstddef>
+#include <memory>
 #include <string>
-using namespace Baseliner::Device;
-constexpr size_t DEFAULT_BUFFER_SIZE_KB = (size_t)1024;
-constexpr size_t KBTOB = 1024;
+using namespace Baseliner::Hardware;
+constexpr size_t ONE_MB = (size_t)1024 * 1024; // DEFAULT_BUFFER_SIZE = 1MB
 
-template <typename Backend>
-class GpuUmstream : public Baseliner::ICase<Backend> {
+template <typename BackendT>
+class GpuUmstream : public Baseliner::ICase<BackendT> {
 public:
-  auto name() -> std::string override;
-  void setup(std::shared_ptr<typename Backend::stream_t> stream) override;
-  void reset_case(std::shared_ptr<typename Backend::stream_t> stream) override {};
-  void setup_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) override;
-  void update_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) override;
-  void run_case(std::shared_ptr<typename Backend::stream_t> stream) override;
-  void teardown(std::shared_ptr<typename Backend::stream_t> stream) override;
+  auto name() -> std::string override {
+    return "gpu-umstream";
+  };
+  void setup(std::shared_ptr<typename BackendT::stream_t> stream) override;
+  void reset_case(std::shared_ptr<typename BackendT::stream_t> stream) override {};
+  void run_case(std::shared_ptr<typename BackendT::stream_t> stream) override;
+  auto number_of_bytes() -> std::optional<size_t> override;
+  void teardown(std::shared_ptr<typename BackendT::stream_t> stream) override;
   auto validate_case() -> bool override {
     return true;
   };
 
   void register_options() override {
-    this->add_option("gpu-umstream", "bufferSizeKB", "the size of the buffer in bytes", buffer_size_kb);
+    Baseliner::ICase<BackendT>::register_options();
     this->add_option("gpu-umstream", "blocksize", "the block size", blockSize);
     this->add_option("gpu-umstream", "prefetch", "Is the memory pre-fetched ?", m_prefetch);
   }
@@ -32,6 +33,6 @@ private:
   int m_block_count;
   int blockSize = 256;
   double *A, *B, *C;
-  size_t buffer_size_kb = DEFAULT_BUFFER_SIZE_KB;
+  size_t m_item_count = ONE_MB / sizeof(double);
 };
 #endif // GPU_UMSTREAM_HPP

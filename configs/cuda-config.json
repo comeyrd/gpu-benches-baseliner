@@ -1,0 +1,94 @@
+
+{
+ "baseliner_version": "0.8.0",
+ "presets": [
+  {
+   "implementation": "StoppingCriterion",
+   "preset_name": "small",
+   "options": {
+    "StoppingCriterion": {
+     "max_nb_repetition": "50"
+    }
+   }
+  },
+  {
+   "implementation": "StoppingCriterion",
+   "preset_name": "medium",
+   "options": {
+    "StoppingCriterion": {
+     "max_nb_repetition": "100"
+    }
+   }
+  },
+  {
+   "implementation": "StoppingCriterion",
+   "preset_name": "big",
+   "options": {
+    "StoppingCriterion": {
+     "max_nb_repetition": "500"
+    }
+   }
+  },
+  {
+   "implementation": "SingleAxeSuite",
+   "preset_name": "worksize-suite",
+   "description": "Benchmarking work sizes",
+   "options": {
+    "SingleAxe": {
+     "values": "[1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]",
+     "option_name": "work_size",
+     "interface_name": "Case"
+    }
+   }
+  },
+  {
+   "implementation": "gpu-memcpy",
+   "preset_name": "no-pin",
+   "description": "Not pinning the host memory",
+   "options": {
+    "gpu-memcpy": {
+     "pin-memory": "0"
+    }
+   }
+  }
+ ],
+ "recipes": [
+  {
+   "backend": "cuda",
+   "case": "gpu-memcpy",
+   "stopping_criterion": {
+    "name": "StoppingCriterion",
+    "preset": "small"
+   },
+   "suite": {
+    "name": "SingleAxeSuite",
+    "preset": "worksize-suite"
+   }
+  },
+  {
+   "backend": "cuda",
+   "case": {"name":"gpu-memcpy","preset":"no-pin"},
+   "stopping_criterion": {
+    "name": "StoppingCriterion",
+    "preset": "small"
+   },
+   "suite": {
+    "name": "SingleAxeSuite",
+    "preset": "worksize-suite"
+   }
+  },
+  {
+   "backend": "cuda",
+   "case": "gpu-umstream",
+   "stopping_criterion": {
+    "name": "StoppingCriterion",
+    "preset": "small"
+   },
+   "suite": {
+    "name": "SingleAxeSuite",
+    "preset": "worksize-suite"
+   }
+  }
+ 
+ ]
+}
