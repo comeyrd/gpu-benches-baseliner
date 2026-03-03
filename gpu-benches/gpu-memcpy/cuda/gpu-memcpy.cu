@@ -2,53 +2,41 @@
 #include <baseliner/Axe.hpp>
 #include <baseliner/Case.hpp>
 #include <baseliner/Suite.hpp>
-#include <baseliner/backend/cuda/CudaBackend.hpp>
+#include <baseliner/hardware/cuda/CudaBackend.hpp>
 #include <cstring>
 using namespace Baseliner;
 template <>
-void GpuMemcpy<Device::CudaBackend>::setup(std::shared_ptr<Device::CudaBackend::stream_t> stream) {
-  CHECK_CUDA(cudaMallocAsync(&device_buffer, buffer_size_kb * KBTOB, *stream));
-  CHECK_CUDA(cudaMallocHost(&host_buffer, buffer_size_kb * KBTOB));
+void GpuMemcpy<Hardware::CudaBackend>::setup(std::shared_ptr<Hardware::CudaBackend::stream_t> stream) {
+  item_count = this->get_work_size() * (ONE_MB / sizeof(char));
+  size_t bytes_size = item_count * sizeof(char);
+  CHECK_CUDA(cudaMallocAsync(&device_buffer, bytes_size, *stream));
+  if (m_pin_memory) {
+    CHECK_CUDA(cudaMallocHost(&host_buffer, bytes_size));
+  } else {
+    host_buffer = new char[bytes_size];
+  }
 }
 template <>
-void GpuMemcpy<Device::CudaBackend>::reset_case(std::shared_ptr<Device::CudaBackend::stream_t> /*stream*/) {
-  memset(host_buffer, 0, buffer_size_kb * KBTOB);
+void GpuMemcpy<Hardware::CudaBackend>::reset_case(std::shared_ptr<Hardware::CudaBackend::stream_t> /*stream*/) {
+  memset(host_buffer, 0, item_count * sizeof(char));
 }
 template <>
-void GpuMemcpy<Device::CudaBackend>::run_case(std::shared_ptr<Device::CudaBackend::stream_t> stream) {
-  CHECK_CUDA(cudaMemcpyAsync(device_buffer, host_buffer, buffer_size_kb * KBTOB, cudaMemcpyDefault, *stream));
+void GpuMemcpy<Hardware::CudaBackend>::run_case(std::shared_ptr<Hardware::CudaBackend::stream_t> stream) {
+  CHECK_CUDA(cudaMemcpyAsync(device_buffer, host_buffer, item_count * sizeof(char), cudaMemcpyDefault, *stream));
 }
 
 template <>
-void GpuMemcpy<Device::CudaBackend>::teardown(std::shared_ptr<Device::CudaBackend::stream_t> /*stream*/) {
+void GpuMemcpy<Hardware::CudaBackend>::teardown(std::shared_ptr<Hardware::CudaBackend::stream_t> /*stream*/) {
   CHECK_CUDA(cudaFree(device_buffer));
-  CHECK_CUDA(cudaFreeHost(host_buffer));
+  if (m_pin_memory) {
+    CHECK_CUDA(cudaFreeHost(host_buffer));
+  } else {
+    delete host_buffer;
+  }
 }
 template <>
-void GpuMemcpy<Device::CudaBackend>::setup_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) {
-  engine->register_metric<Baseliner::Stats::ByteNumbers>(buffer_size_kb * KBTOB);
+auto GpuMemcpy<Hardware::CudaBackend>::number_of_bytes() -> std::optional<size_t> {
+  return item_count * sizeof(char);
 };
-template <>
-void GpuMemcpy<Device::CudaBackend>::update_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) {
-  engine->update_values<Baseliner::Stats::ByteNumbers>(buffer_size_kb * KBTOB);
-}
-
-template <>
-auto GpuMemcpy<Device::CudaBackend>::name() -> std::string {
-  return "cuda-memcpy";
-}
-
-static auto memcpyBench = Baseliner::CudaBenchmark()
-                              .set_case<GpuMemcpy<Device::CudaBackend>>()
-                              .set_stopping_criterion<Baseliner::StoppingCriterion>(2, 1)
-                              .set_block(false)
-                              .add_stat<Baseliner::Stats::Median>()
-                              .add_stat<Baseliner::Stats::MedianItemTroughput>();
-
-Baseliner::Axe axe = {"gpu-memcpy",
-                      "bufferSizeKB",
-                      {"1", "2", "4", "8", "16", "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192",
-                       "16384", "32768", "65536", "131072", "262144"}};
-
-Baseliner::SingleAxeSuite suite(std::make_shared<Baseliner::CudaBenchmark>(std::move(memcpyBench)), std::move(axe));
-BASELINER_REGISTER_TASK(&suite);
+using CudaMemcpy = GpuMemcpy<Hardware::CudaBackend>;
+BASELINER_REGISTER_CASE_NAME(CudaMemcpy, CudaMemcpy().name());

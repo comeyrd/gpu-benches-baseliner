@@ -1,10 +1,12 @@
-#include "baseliner/backend/cuda/CudaBackend.hpp"
+#include "baseliner/hardware/cuda/CudaBackend.hpp"
 #include "gpu-umstream.hpp"
 #include <baseliner/Axe.hpp>
 #include <baseliner/Case.hpp>
 #include <baseliner/Suite.hpp>
+#include <baseliner/managers/RegisteringMacros.hpp>
 
 using namespace Baseliner;
+using namespace Baseliner::Hardware;
 
 __global__ void scale(double *A, double *B, size_t N) {
   size_t tidx = threadIdx.x + blockDim.x * blockIdx.x;
@@ -20,8 +22,9 @@ __global__ void triad(double *A, double *B, double *C, size_t N) {
   }
 }
 template <>
-void GpuUmstream<Device::CudaBackend>::setup(std::shared_ptr<Device::CudaBackend::stream_t> stream) {
-  size_t nb_bytes = buffer_size_kb * KBTOB * sizeof(double);
+void GpuUmstream<CudaBackend>::setup(std::shared_ptr<CudaBackend::stream_t> stream) {
+  size_t nb_bytes = this->get_work_size() * ONE_MB;
+  m_item_count = this->get_work_size() * (ONE_MB / sizeof(double));
   CHECK_CUDA(cudaMallocManaged(&A, nb_bytes));
   CHECK_CUDA(cudaMallocManaged(&B, nb_bytes));
   CHECK_CUDA(cudaMallocManaged(&C, nb_bytes));
@@ -41,48 +44,18 @@ void GpuUmstream<Device::CudaBackend>::setup(std::shared_ptr<Device::CudaBackend
   }
 }
 template <>
-void GpuUmstream<Device::CudaBackend>::run_case(std::shared_ptr<CudaBackend::stream_t> stream) {
-  triad<<<m_block_count, blockSize, 0, *stream>>>(A, B, C, buffer_size_kb * KBTOB);
+void GpuUmstream<CudaBackend>::run_case(std::shared_ptr<CudaBackend::stream_t> stream) {
+  triad<<<m_block_count, blockSize, 0, *stream>>>(A, B, C, m_item_count);
 }
 template <>
-void GpuUmstream<Device::CudaBackend>::setup_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) {
-  size_t buffer_size_bytes = buffer_size_kb * KBTOB;
-  size_t total_bytes = buffer_size_bytes * sizeof(double) * 3; // 3 reads
-  engine->register_metric<Baseliner::Stats::ByteNumbers>(total_bytes);
-}
+auto GpuUmstream<CudaBackend>::number_of_bytes() -> std::optional<size_t> {
+  return m_item_count * sizeof(double) * 3; // 3reads;
+};
 template <>
-void GpuUmstream<Device::CudaBackend>::update_metrics(std::shared_ptr<Baseliner::Stats::StatsEngine> &engine) {
-  size_t buffer_size_bytes = buffer_size_kb * KBTOB;
-  size_t total_bytes = buffer_size_bytes * sizeof(double) * 3; // 3 reads
-  engine->update_values<Baseliner::Stats::ByteNumbers>(total_bytes);
-}
-template <>
-void GpuUmstream<Device::CudaBackend>::teardown(std::shared_ptr<typename CudaBackend::stream_t> stream) {
+void GpuUmstream<CudaBackend>::teardown(std::shared_ptr<typename CudaBackend::stream_t> stream) {
   CHECK_CUDA(cudaFree(A));
   CHECK_CUDA(cudaFree(B));
   CHECK_CUDA(cudaFree(C));
 }
-template <>
-std::string GpuUmstream<Device::CudaBackend>::name() {
-  return "cuda-umstream";
-}
-
-namespace {
-  static auto umstreamBench = Baseliner::CudaBenchmark()
-                                  .set_case<GpuUmstream<Device::CudaBackend>>()
-                                  .set_stopping_criterion<Baseliner::StoppingCriterion>(10, 1)
-                                  .set_block(false)
-                                  .set_flush_l2(true)
-                                  .add_stat<Baseliner::Stats::Median>()
-                                  .add_stat<Baseliner::Stats::MedianItemTroughput>();
-
-  Baseliner::Axe axe2 = {
-      "gpu-umstream",
-      "bufferSizeKB",
-      {"1024", "2048", "4096", "8192", "16384", "32768", "65536", "131072", "262144", "524288", "1048576", "2097152"}};
-
-  Baseliner::SingleAxeSuite suite2(std::make_shared<Baseliner::CudaBenchmark>(std::move(umstreamBench)),
-                                   std::move(axe2));
-  BASELINER_REGISTER_TASK(&suite2);
-
-} // namespace
+using CudaUmstream = GpuUmstream<CudaBackend>;
+BASELINER_REGISTER_CASE_NAME(CudaUmstream, CudaUmstream().name());
