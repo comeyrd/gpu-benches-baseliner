@@ -19,11 +19,11 @@ void GpuMemcpy<Hardware::HipBackend>::setup(std::shared_ptr<Hardware::HipBackend
   }
 }
 template <>
-void GpuMemcpy<Hardware::HipBackend>::reset_case(std::shared_ptr<Hardware::HipBackend::stream_t> /*stream*/) {
+void GpuMemcpy<Hardware::HipBackend>::reset_workload(std::shared_ptr<Hardware::HipBackend::stream_t> /*stream*/) {
   memset(host_buffer, 0, item_count * sizeof(char));
 }
 template <>
-void GpuMemcpy<Hardware::HipBackend>::run_case(std::shared_ptr<Hardware::HipBackend::stream_t> stream) {
+void GpuMemcpy<Hardware::HipBackend>::run_workload(std::shared_ptr<Hardware::HipBackend::stream_t> stream) {
   CHECK_HIP(hipMemcpyAsync(device_buffer, host_buffer, item_count * sizeof(char), hipMemcpyDefault, *stream));
 }
 
@@ -42,4 +42,4 @@ auto GpuMemcpy<Hardware::HipBackend>::number_of_bytes() -> std::optional<size_t>
 };
 
 using HipMemcpy = GpuMemcpy<Hardware::HipBackend>;
-BASELINER_REGISTER_CASE_NAME(HipMemcpy, HipMemcpy().name());
+BASELINER_REGISTER_WORKLOAD_NAME(HipMemcpy, HipMemcpy().name());

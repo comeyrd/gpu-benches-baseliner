@@ -45,7 +45,7 @@ void GpuUmstream<HipBackend>::setup(std::shared_ptr<HipBackend::stream_t> stream
   }
 }
 template <>
-void GpuUmstream<HipBackend>::run_case(std::shared_ptr<HipBackend::stream_t> stream) {
+void GpuUmstream<HipBackend>::run_workload(std::shared_ptr<HipBackend::stream_t> stream) {
   triad<<<m_block_count, blockSize, 0, *stream>>>(A, B, C, m_item_count);
 }
 
@@ -60,4 +60,4 @@ void GpuUmstream<HipBackend>::teardown(std::shared_ptr<typename HipBackend::stre
   CHECK_HIP(hipFree(C));
 }
 using HipUmstream = GpuUmstream<Hardware::HipBackend>;
-BASELINER_REGISTER_CASE_NAME(HipUmstream, HipUmstream().name());
+BASELINER_REGISTER_WORKLOAD_NAME(HipUmstream, HipUmstream().name());

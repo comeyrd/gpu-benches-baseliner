@@ -1,8 +1,6 @@
 #include "gpu-memcpy.hpp"
-#include <baseliner/Axe.hpp>
-#include <baseliner/Case.hpp>
-#include <baseliner/Suite.hpp>
-#include <baseliner/hardware/cuda/CudaBackend.hpp>
+#include <baseliner/core/hardware/cuda/CudaBackend.hpp>
+#include <baseliner/registry/RegisteringMacros.hpp>
 #include <cstring>
 using namespace Baseliner;
 template <>
@@ -17,11 +15,11 @@ void GpuMemcpy<Hardware::CudaBackend>::setup(std::shared_ptr<Hardware::CudaBacke
   }
 }
 template <>
-void GpuMemcpy<Hardware::CudaBackend>::reset_case(std::shared_ptr<Hardware::CudaBackend::stream_t> /*stream*/) {
+void GpuMemcpy<Hardware::CudaBackend>::reset_workload(std::shared_ptr<Hardware::CudaBackend::stream_t> /*stream*/) {
   memset(host_buffer, 0, item_count * sizeof(char));
 }
 template <>
-void GpuMemcpy<Hardware::CudaBackend>::run_case(std::shared_ptr<Hardware::CudaBackend::stream_t> stream) {
+void GpuMemcpy<Hardware::CudaBackend>::run_workload(std::shared_ptr<Hardware::CudaBackend::stream_t> stream) {
   CHECK_CUDA(cudaMemcpyAsync(device_buffer, host_buffer, item_count * sizeof(char), cudaMemcpyDefault, *stream));
 }
 
@@ -39,4 +37,4 @@ auto GpuMemcpy<Hardware::CudaBackend>::number_of_bytes() -> std::optional<size_t
   return item_count * sizeof(char);
 };
 using CudaMemcpy = GpuMemcpy<Hardware::CudaBackend>;
-BASELINER_REGISTER_CASE_NAME(CudaMemcpy, CudaMemcpy().name());
+BASELINER_REGISTER_WORKLOAD_NAME(CudaMemcpy, CudaMemcpy().name());

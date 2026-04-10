@@ -1,9 +1,6 @@
-#include "baseliner/hardware/cuda/CudaBackend.hpp"
 #include "gpu-umstream.hpp"
-#include <baseliner/Axe.hpp>
-#include <baseliner/Case.hpp>
-#include <baseliner/Suite.hpp>
-#include <baseliner/managers/RegisteringMacros.hpp>
+#include <baseliner/core/hardware/cuda/CudaBackend.hpp>
+#include <baseliner/registry/RegisteringMacros.hpp>
 
 using namespace Baseliner;
 using namespace Baseliner::Hardware;
@@ -44,7 +41,7 @@ void GpuUmstream<CudaBackend>::setup(std::shared_ptr<CudaBackend::stream_t> stre
   }
 }
 template <>
-void GpuUmstream<CudaBackend>::run_case(std::shared_ptr<CudaBackend::stream_t> stream) {
+void GpuUmstream<CudaBackend>::run_workload(std::shared_ptr<CudaBackend::stream_t> stream) {
   triad<<<m_block_count, blockSize, 0, *stream>>>(A, B, C, m_item_count);
 }
 template <>
@@ -58,4 +55,4 @@ void GpuUmstream<CudaBackend>::teardown(std::shared_ptr<typename CudaBackend::st
   CHECK_CUDA(cudaFree(C));
 }
 using CudaUmstream = GpuUmstream<CudaBackend>;
-BASELINER_REGISTER_CASE_NAME(CudaUmstream, CudaUmstream().name());
+BASELINER_REGISTER_WORKLOAD_NAME(CudaUmstream, CudaUmstream().name());

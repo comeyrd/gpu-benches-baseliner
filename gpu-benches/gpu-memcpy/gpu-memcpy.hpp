@@ -1,33 +1,29 @@
 #ifndef GPU_MEMCPY
 #define GPU_MEMCPY
-#include "baseliner/Axe.hpp"
-#include "baseliner/ConfigFile.hpp"
-#include "baseliner/Options.hpp"
-#include <baseliner/managers/RegisteringMacros.hpp>
+#include <baseliner/core/Workload.hpp>
 
-#include <baseliner/Case.hpp>
 #include <cstddef>
 #include <memory>
 #include <string>
 constexpr size_t ONE_MB = (size_t)1024 * 1024;
 
 template <typename BackendT>
-class GpuMemcpy : public Baseliner::ICase<BackendT> {
+class GpuMemcpy : public Baseliner::IWorkload<BackendT> {
 
 public:
   auto name() -> std::string override {
     return "gpu-memcpy";
   };
   void setup(std::shared_ptr<typename BackendT::stream_t> stream) override;
-  void reset_case(std::shared_ptr<typename BackendT::stream_t> stream) override;
-  void run_case(std::shared_ptr<typename BackendT::stream_t> stream) override;
+  void reset_workload(std::shared_ptr<typename BackendT::stream_t> stream) override;
+  void run_workload(std::shared_ptr<typename BackendT::stream_t> stream) override;
   auto number_of_bytes() -> std::optional<size_t> override;
   void teardown(std::shared_ptr<typename BackendT::stream_t> stream) override;
-  auto validate_case() -> bool override {
+  auto validate_workload() -> bool override {
     return true;
   };
   void register_options() override {
-    Baseliner::ICase<BackendT>::register_options();
+    Baseliner::IWorkload<BackendT>::register_options();
     this->add_option("gpu-memcpy", "pin-memory", "Is the host memory pinned ? ", m_pin_memory);
   }
 
