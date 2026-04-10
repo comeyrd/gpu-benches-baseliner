@@ -1,9 +1,6 @@
 #include "gpu-umstream.hpp"
-#include <baseliner/Axe.hpp>
-#include <baseliner/Case.hpp>
-#include <baseliner/Suite.hpp>
-#include <baseliner/hardware/hip/HipBackend.hpp>
-#include <baseliner/managers/RegisteringMacros.hpp>
+#include <baseliner/core/hardware/hip/HipBackend.hpp>
+#include <baseliner/registry/RegisteringMacros.hpp>
 #include <memory>
 using namespace Baseliner::Hardware;
 using namespace Baseliner;

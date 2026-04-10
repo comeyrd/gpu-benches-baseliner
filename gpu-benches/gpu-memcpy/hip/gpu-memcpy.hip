@@ -1,10 +1,6 @@
 #include "gpu-memcpy.hpp"
-#include <baseliner/Axe.hpp>
-#include <baseliner/Case.hpp>
-#include <baseliner/Recipe.hpp>
-#include <baseliner/Suite.hpp>
-#include <baseliner/hardware/hip/HipBackend.hpp>
-#include <baseliner/managers/RegisteringMacros.hpp>
+#include <baseliner/core/hardware/hip/HipBackend.hpp>
+#include <baseliner/registry/RegisteringMacros.hpp>
 #include <cstring>
 using namespace Baseliner;
 template <>
