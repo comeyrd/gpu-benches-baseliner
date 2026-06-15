@@ -5,10 +5,6 @@
 #include <random>
 #include <vector>
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 static constexpr int LAT_CACHE_LINE_INTS = 128 / sizeof(int64_t);
 static constexpr int LAT_SKIP_FACTOR     = 1;
 
@@ -68,6 +64,7 @@ void CudaLatency::setup_device(typename backend::stream_t /*stream*/) {
     m_chain_length   = static_cast<int64_t>(
         buf_bytes / (LAT_SKIP_FACTOR * LAT_CACHE_LINE_INTS * sizeof(int64_t)));
     if (m_chain_length < 2) m_chain_length = 16;
+    m_iterations = std::max(m_chain_length, (int64_t)100000);
     CHECK_CUDA(cudaMallocManaged(&m_device_buffer, buf_bytes));
     CHECK_CUDA(cudaMallocManaged(&m_dummy_buffer, sizeof(int64_t)));
     lat_build_pointer_chain(m_device_buffer, m_chain_length);
