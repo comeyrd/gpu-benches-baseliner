@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-add_library(gpu-memcpy-cuda-obj OBJECT gpu-memcpy.cu)
+add_library(gpu-memcpy-cuda-obj OBJECT GpuMemcpyWorkload.cu)
 
 target_include_directories(gpu-memcpy-cuda-obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set_property(GLOBAL APPEND PROPERTY APP_OBJECT_TARGETS gpu-memcpy-cuda-obj)

@@ -3,5 +3,13 @@ add_subdirectory(cuda)
 endif()
 
 if(HAS_HIP)
+if(BASELINER_BUILD_HIPIFIABLE)
+add_subdirectory(hipifiable)
+else()
 add_subdirectory(hip)
+endif()
+endif()
+
+if(HAS_NVBENCH_ADAPTER)
+add_subdirectory(workload)
 endif()
